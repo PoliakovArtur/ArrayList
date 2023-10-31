@@ -2,7 +2,7 @@ package tests;
 
 import example.ArrayList;
 import org.junit.jupiter.api.*;
-
+import static org.junit.jupiter.api.Assertions.*;
 public class AddTests extends ArrayListTester {
 
     public AddTests() {
@@ -43,6 +43,13 @@ public class AddTests extends ArrayListTester {
     @Test
     public void testAddCollectionInConstructor() {
         testingList = new ArrayList<>(testingList);
+    }
+
+    @Test
+    public void NullPointerExceptionTest() {
+        assertThrows(NullPointerException.class, () -> testingList.addAll(null));
+        assertThrows(NullPointerException.class, () -> testingList.addAll(3, null));
+        assertThrows(NullPointerException.class, () -> new ArrayList<>(null));
     }
 
     private void addAll(int index, ArrayList<Integer> randomList) {

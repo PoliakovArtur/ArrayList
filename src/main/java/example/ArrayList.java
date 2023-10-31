@@ -9,9 +9,9 @@ import java.util.*;
  * происходит в 1.5 раза. Однозначным плюсом такой реализации является доступ к элементу
  * по индексу за О(1), как и в обычном массиве.
  * Кроме методов, предоставляемых {@code List}, здесь также реализованы методы манипуляций
- * с размером внутреннего массива (далее capacity), такие как trimToSize и ensureCapacity,
+ * с размером внутреннего массива (далее capacity), такие, как trimToSize и ensureCapacity,
  * позволяющие уменьшать его размер до количества элементов, и увеличивать до нужного значения,
- * метод clone, а также реализована вожможность сортировать список, даже если он параметризован
+ * метод clone, а также реализована возможность сортировать список, даже если он параметризован
  * типом, не имплементирующим Comparable.
  *
  * <p>Методы {@code size}, {@code isEmpty}, {@code get}, {@code set},
@@ -28,15 +28,15 @@ import java.util.*;
  *
  * <p>Итераторы, возвращаемые методами {@link #iterator() iterator} и
  * {@link #listIterator(int) listIterator} являются реализациями вложенного класса
- * ArrayListIterator, разница лишь в том, что итератор, полученый с помощью
+ * ArrayListIterator, разница лишь в том, что итератор, полученный с помощью
  * {@link #iterator() iterator}, обернут в интерфейс {@code Iterator}.
  * При вызове итератора, в нем сохраняется количество элементов в списке, на момент
- * его вызова. Если список был изменем не через итератора, то при вызове методов
+ * его вызова. Если список был именем не через итератор, то при вызове методов
  * {@link ArrayListIterator#next() next}, {@link ArrayListIterator#previous() previous},
  * {@link ArrayListIterator#remove() remove},{@link ArrayListIterator#add(Object) add}
  * будет выброшено {@link ConcurrentModificationException}.
  *
- * @param <E> Тип, котороым параметризован список
+ * @param <E> Тип, которым параметризован список
  *
  * @author  Поляков Артур
  */
@@ -57,6 +57,10 @@ public class ArrayList<E> implements List<E>, Cloneable {
      * Размер внутреннего массива.
      */
     private int capacity;
+    /**
+     * Количество раз, которое список изменялся
+     */
+    private int modCount;
     /**
      * Конструктор, позволяющий указать размер
      * внутреннего массива
@@ -105,6 +109,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
         shiftArray(index, index + 1, size - index);
         size++;
         elements[index] = element;
+        modCount++;
     }
     /**
      * Добавляет элемент в конец списка
@@ -148,6 +153,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
             elements[index++] = e;
         }
         size = resultSize;
+        modCount++;
         return true;
     }
     /**
@@ -208,6 +214,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
         shiftArray(index + 1, index, size - (index + 1));
         size--;
         elements[size] = null;
+        modCount++;
         return removed;
     }
 
@@ -241,6 +248,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
             for (int i = size - 1; i >= 0 ; i--) {
                 if(elements[i] == present) remove(i);
             }
+            modCount++;
             return true;
         }
         return false;
@@ -269,6 +277,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
         }
         size = newSize;
         elements = retainedElements;
+        modCount++;
         return true;
     }
     /**
@@ -278,6 +287,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
     public void clear() {
         Arrays.fill(elements, null);
         size = 0;
+        modCount++;
     }
     /**
      * Ищет переданный элемент в списке, начиная с начала списка
@@ -434,7 +444,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
      */
     @Override
     public Iterator<E> iterator() {
-        return new ArrayListIterator(size);
+        return new ArrayListIterator();
     }
     /**
      * Возвращает итератор списка
@@ -443,30 +453,51 @@ public class ArrayList<E> implements List<E>, Cloneable {
      */
     @Override
     public ListIterator<E> listIterator() {
-        return new ArrayListIterator(size);
+        return new ArrayListIterator();
     }
     /**
      * Позволяет получить итератор, указатель которого находится на переданном индексе
-     * @param index индекс, на котором будет находится указатель итератора
+     * @param index индекс, на котором будет находиться указатель итератора.
+     * Здесь индекс может быть равен size, что означает что указатель будет находиться в конце списка.
      * @return итератор данного списка, являющийся объектом класса {@link ArrayListIterator},
      * обернутый в интерфейс {@link ListIterator}
      */
+
     @Override
     public ListIterator<E> listIterator(int index) {
-        checkIndex(index);
-        return new ArrayListIterator(size, index);
+        if(index != size) checkIndex(index);
+        return new ArrayListIterator(index);
     }
+
+    /**
+     * Класс, реализующий интерфейс {@link ListIterator} в самом базовом варианте.
+     * Данный итератор позволяет двигаться по списку в любом направлении, добавлять,
+     * удалять элементы, менять их значение. Он запоминает сколько раз менялся список
+     * на момент его создания и при вызове методов {@link ArrayListIterator#next() next},
+     * {@link ArrayListIterator#previous() previous}, {@link ArrayListIterator#remove remove},
+     * {@link ArrayListIterator#add add}, сравнивает данное значение с аналогичным, которое хранится в самом списке.
+     * Если они не равны, то выбрасывается {@link ConcurrentModificationException}.
+     * <p>Указатель списка может принимать значения от 0 до size. Когда он принимает эти значения, это означает,
+     * что итератор дошел до конца списка.
+     * <p>Удалить элемент или поменять значение элементам можно только после вызова одного из методов:
+     * {@link ArrayListIterator#next() next}, {@link ArrayListIterator#previous() previous}, при чем
+     * единожды - вызвать два раза подряд метод {@link ArrayListIterator#remove remove} или
+     * {@link ArrayListIterator#set set}, или вызвать эти методы подряд в любой комбинации не получится,
+     * будет выброшено {@link IllegalStateException}. При вызове этих методов они применяются к
+     * предыдущему элементу, на котором стоял указатель, т.е. если был вызван метод {@link ArrayListIterator#next() next},
+     * то будет изменен элемент, стоящий раньше по списку относительно указателя, если {@link ArrayListIterator#previous() previous},
+     * то наоборот.
+     * <p>Добавление элементов с помощью итератора работает аналогичным образом, что и удаление, за исключением ограничения на
+     * обязательный вызов перед добавлением {@link ArrayListIterator#next() next} или {@link ArrayListIterator#previous() previous}.
+     * Добавлять элементы можно сколько угодно раз подряд.
+     */
     private class ArrayListIterator implements ListIterator<E> {
-        int size;
         int cursor;
         int last;
-        int modCount;
-        ArrayListIterator(int size) {
-            this(size, 0);
-        }
-        ArrayListIterator(int size, int cursor) {
-            this.size = size;
-            this.modCount = size;
+        int expectedModCount = modCount;
+
+        ArrayListIterator() {}
+        ArrayListIterator(int cursor) {
             this.cursor = cursor;
             last = -1;
         }
@@ -518,8 +549,7 @@ public class ArrayList<E> implements List<E>, Cloneable {
             if(last < cursor) cursor = last;
             ArrayList.this.remove(last);
             last = -1;
-            modCount--;
-            size--;
+            expectedModCount++;
         }
 
         @Override
@@ -533,25 +563,42 @@ public class ArrayList<E> implements List<E>, Cloneable {
         @Override
         public void add(E e) {
             checkForCoModification();
-            modCount++;
-            size++;
             ArrayList.this.add(cursor++, e);
+            expectedModCount++;
         }
         void checkForCoModification() {
-            if(modCount != ArrayList.this.size) {
+            if(expectedModCount != ArrayList.this.modCount) {
                 throw new ConcurrentModificationException();
             }
         }
     }
 
+    /**
+     * Сдвигает часть внутреннего массива. Данный метод является универсальным,
+     * он позволяет переместить часть массива назад либо вперед. Используется
+     * при вставке элементов в список, при удалении элементов из середины списка.
+     * @param from начальный индекс той части массива, которую нужно переместить
+     * @param to индекс, куда нужно переместить часть массива
+     * @param count размер перемещаемой части массива
+     */
+
     private void shiftArray(int from, int to, int count) {
         System.arraycopy(elements, from, elements, to, count);
     }
 
+    /**
+     * Увеличивает массив в полтора раза путем создания нового массива и копирования в него элементов из старого.
+     */
     private void increaseArray() {
         increaseArray((capacity >> 1) + capacity + 1);
     }
 
+    /**
+     * Увеличивает массив до переданного значения. Используется в некоторых методах, например,
+     * в добавлении коллекции элементов список, чтобы не увеличивать массив несколько раз,
+     * если коллекция слишком велика.
+     * @param newCapacity размер, до которого нужно увеличить массив
+     */
     private void increaseArray(int newCapacity) {
         capacity = newCapacity;
         Object[] newArray = new Object[capacity];
@@ -559,15 +606,46 @@ public class ArrayList<E> implements List<E>, Cloneable {
         elements = newArray;
     }
 
+    /**
+     * Компаратор, используемый при сортировке списка.
+     */
     private transient Comparator<? super E> comparator;
-    public void sort() {
-        sort((e1, e2) -> ((Comparable<E>) e1).compareTo(e2));
-    }
+    /**
+     * Сортирует список, с помощью переданного компаратора.
+     * Здесь реализована классическая сортировка Хоара или
+     * быстрая сортировка. Средняя алгоритмическая сложность
+     * равна O(n log n), где n - количество элементов, основание
+     * логарифма равно 2, т.к. рекурсивно массив разбивается на
+     * два подмассива, которые сортируются, до тех пор, пока
+     * массив не будет состоять из одного элемента. Разбивка на массивы
+     * происходит не буквально, а за счет передачи индексов, за пределами
+     * которых массив не будет сортироваться
+     * @param comparator компаратор, с помощью которого будет сортироваться массив
+     */
 
     public void sort(Comparator<? super E> comparator) {
         this.comparator = comparator;
         separate(0, size - 1);
     }
+
+    /**
+     * Сортирует список, пытаясь приводить сортируемые элементы к
+     * Comparable. Ответственность за то, имплементирует ли параметризованный
+     * тип Comparable, ложится на того, кто вызывает этот метод. Ради сокращения
+     * количества кода, приведение к Comparable и сравнение элементов завернуто
+     * в Comparator.
+     */
+    @SuppressWarnings("unchecked")
+    public void sort() {
+        sort((e1, e2) -> ((Comparable<E>) e1).compareTo(e2));
+    }
+
+    /**
+     * Часть алгоритма быстрой сортировка. Данный метод рекурсивно разбивает массив
+     * на подмассивы, до тех пор, пока массив не будет состоять из одного элемента.
+     * @param left левая граница массива включительно
+     * @param right правая граница массива включительно
+     */
 
     private void separate(int left, int right) {
         if(left < right) {
@@ -577,6 +655,19 @@ public class ArrayList<E> implements List<E>, Cloneable {
         }
     }
 
+    /**
+     * Часть алгоритма быстрой сортировка. Данный метод сортирует массив
+     * относительно опорного элемента. Здесь выбирается элемент посередине,
+     * хотя на самом деле неважно какой элемент будет выбран, т.к. заранее
+     * неизвестно, какой массив будет передан. В результате выполнения данного
+     * метода массив будет отсортирован относительно опорного в том плане,
+     * что все элементы, которые меньше либо равны опорному будут однозначно стоять
+     * левее всех элементов, которые больше либо равны опорному.
+     * @param left левая граница массива включительно
+     * @param right правая граница массива включительно
+     * @return начало правого подмассива, в котором все элементы больше либо равны опорному.
+     */
+    @SuppressWarnings("unchecked")
     private int sort(int left, int right) {
         @SuppressWarnings("unchecked")
         E pivot = (E) elements[left + right >> 1];
@@ -593,10 +684,15 @@ public class ArrayList<E> implements List<E>, Cloneable {
         }
         return left;
     }
-
+    /**
+     * Клонирует список. Т.к. при клонировании копируются ссылки, то в склонированном списке
+     * создается новый внутренний массив, аналогичный по содержанию массиву данного списка.
+     * @return клон данного списка
+     */
     @Override
     public Object clone() {
         try {
+            @SuppressWarnings("unchecked")
             ArrayList<E> clone = (ArrayList<E>) super.clone();
             clone.elements = Arrays.copyOf(elements, size);
             return clone;
@@ -604,6 +700,11 @@ public class ArrayList<E> implements List<E>, Cloneable {
             throw new InternalError();
         }
     }
+
+    /**
+     * Строковое представление списка.
+     * @return строковое представление списка
+     */
 
     @Override
     public String toString() {

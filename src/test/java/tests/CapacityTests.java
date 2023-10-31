@@ -4,7 +4,6 @@ import example.ArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CapacityTests extends ArrayListTester {
@@ -54,7 +53,7 @@ public class CapacityTests extends ArrayListTester {
         assertTrue(testingList.ensureCapacity(expected));
         int actual = getCapacity(testingList);
         assertEquals(expected, actual);
-        assertFalse(testingList.ensureCapacity(-1));
+        assertThrows(IllegalArgumentException.class, () -> testingList.ensureCapacity(-1));
         assertFalse(testingList.ensureCapacity(randomValue(0, expected)));
     }
     private int getCapacity(ArrayList<Integer> list) throws IllegalAccessException {

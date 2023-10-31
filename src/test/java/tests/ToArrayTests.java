@@ -1,9 +1,11 @@
 package tests;
 
+import example.ArrayList;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ToArrayTests extends ArrayListTester {
 
@@ -31,5 +33,11 @@ public class ToArrayTests extends ArrayListTester {
         Integer[] actual = expected.clone();
         testingList.toArray(actual);
         assertArrayEquals(expected, actual);
+    }
+
+    @Test
+    public void NullPointerExceptionTest() {
+        Object[] array = null;
+        assertThrows(NullPointerException.class, () -> testingList.toArray(array));
     }
 }

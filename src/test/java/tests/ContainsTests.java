@@ -4,6 +4,7 @@ import example.ArrayList;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ContainsTests extends ArrayListTester {
 
@@ -48,5 +49,11 @@ public class ContainsTests extends ArrayListTester {
             boolean actual = testingList.containsAll(list);
             assertEquals(expected, actual);
         }
+    }
+
+    @Test
+    public void NullPointerExceptionTest() {
+        generateRandomTestingList();
+        assertThrows(NullPointerException.class, () -> testingList.containsAll(null));
     }
 }

@@ -114,4 +114,9 @@ public class RemoveTests extends ArrayListTester {
         testingList.retainAll(retainedElements);
     }
 
+    @Test
+    public void NullPointerExceptionTest() {
+        assertThrows(NullPointerException.class, () -> testingList.removeAll(null));
+        assertThrows(NullPointerException.class, () -> testingList.retainAll(null));
+    }
 }
